@@ -56,7 +56,7 @@ def EvapotranspirationLoss(p,S,Sw,St,ETmax,A,dt):
 
 class HillslopeReservoirModel:
 
-    def __init__(self,grid,node,sw=0.18,sf=0.3,ETmax=1E-3):
+    def __init__(self,grid,node):
 
         self.rho = 1000
         self.g = 9.81
@@ -68,12 +68,12 @@ class HillslopeReservoirModel:
         self.Zo = grid.at_node['regolith__thickness'][node]
         self.Ksat = grid.at_node['hydraulic_conductivity'][node]
         self.k_macropores = grid.at_node['hydraulic_conductivity_f'][node]
-        self.gradZo = grid.at_node['topographic__steepest_slope'][node]
+        self.gradZo = np.max(grid.at_node['topographic__steepest_slope'][node])
         self.k = grid.at_node['linear_reservoir_constant'][node]
 
-        self.ETmax = ETmax
-        self.sw = sw
-        self.sf = sf
+        self.ETmax = grid.at_node['Maximum_ET_rate'][node]
+        self.sw = grid.at_node['soil_wilting_point'][node]
+        self.sf = grid.at_node['soil_field_capacity'][node]
 
         self.vo = self.gradZo*self.Ksat*self.k_macropores
         self.St = 1*self.n*self.Z*self.A
@@ -157,32 +157,3 @@ class HillslopeReservoirModel:
         return [self.A, self.w, self.n, self.Z, self.Zo, self.Ksat,
                 self.k_macropores, self.gradZo, self.k, self.ETmax, self.sw, self.sf]
 
-#### Things below here are preliminary tests on using multiprocessing
-
-def cube(x):
-    return x**3
-
-def run_test():
-    pool = mp.Pool(processes=4)
-    results = pool.map(cube, range(1,7))
-    print(results)
-
-def run_one_model(grid,i,durations,intensities,sw,sf,ETmax,base_path):
-    node = mg.core_nodes[i]
-
-    df = pd.DataFrame(columns = ['dt', 'intensity', 'f', 'Qh', 'Qet', 'Qr', 'Qs', 'S', 'Qrc', 'Qbc', 'Qsc', 'Taub'])
-
-    hrm = HillslopeReservoirModel(mg,node,sw=sw,sf=sw,ETmax=ETmax)
-
-    for j in range(N):
-        hrm.run_one_step(durations[j],intensities[j])
-
-        df.loc[j] = hrm.yield_all_timestep_data()
-
-    file = open(base_path+'runoff_data_'+str(node)+'.p', 'wb')
-    pickle.dump(df, file)
-    file.close()
-
-def run_models_parallel(num_processes,num_models):
-    pool = mp.Pool(processes=num_processes)
-    pool.map(run_one_model, range(num_models))
