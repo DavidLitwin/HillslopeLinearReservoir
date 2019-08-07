@@ -23,6 +23,7 @@ from hillslope_reservoir_grid_funcs import *
 
 zr_uniform = 2 #m
 n_uniform = 0.5 #[]
+n_manning_uniform = 0.05 #[s/m^1/3]
 Ksat_uniform = 0.5 #m/hr
 K_f_uniform = 5 #[]
 a_uniform = 0 #[]
@@ -36,7 +37,7 @@ sf_uniform = 0.3 #[]
 
 boundaries = {'top': 'closed','bottom': 'closed','right':'closed','left':'closed'}
 mg = RasterModelGrid((51, 51), spacing=10.0,bc=boundaries)
-mg.status_at_node[1] = FIXED_VALUE_BOUNDARY 
+mg.status_at_node[1] = FIXED_VALUE_BOUNDARY
 
 #%% Calculate grid attributes
 
@@ -51,6 +52,9 @@ base[mg.core_nodes] = z[mg.core_nodes] - zr[mg.core_nodes]
 
 n = mg.add_zeros('node','porosity')
 n[mg.core_nodes] = n_uniform
+
+n_manning = mg.add_zeros('node','manning_n')
+n_manning[mg.core_nodes] = n_manning_uniform
 
 Ksat = mg.add_zeros('node','hydraulic_conductivity')
 Ksat[mg.core_nodes] = Ksat_uniform
@@ -92,7 +96,7 @@ zr_avg = mg.add_field('catchment_average_regolith__thickness',_zr/_areas,at='nod
 # catchment total storage is that average thickness times the area
 S_avg = mg.add_field('catchment_average__storage',zr_avg*mg.at_node['drainage_area'],at='node')
 
-# the average flow length to the outlet is the accumulated flow lengths from each cell 
+# the average flow length to the outlet is the accumulated flow lengths from each cell
 # to the global outlet minus the distance from the local outlet to the global outlet
 L_avg = mg.add_field('catchment_average_flow__length',_L/_areas-L+mg.dx,at='node')
 
@@ -115,7 +119,7 @@ file.close()
 T = 24*365
 dt = np.min(np.floor(1/mg.at_node['linear_reservoir_constant'][mg.core_nodes]))
 
-precip = PrecipitationDistribution(mean_storm_duration=Tr, mean_interstorm_duration=Td, 
+precip = PrecipitationDistribution(mean_storm_duration=Tr, mean_interstorm_duration=Td,
                                                mean_storm_depth=p, total_t=T, delta_t=dt)
 durations = []
 intensities = []
@@ -131,27 +135,27 @@ N = len(durations)
 
 
 #for i in range(mg.number_of_core_nodes):
-#    
+#
 #    start = time.process_time()
-#    
-#    
-#    node = mg.core_nodes[i]   
+#
+#
+#    node = mg.core_nodes[i]
 #
 #    df = pd.DataFrame(columns = ['dt', 'intensity', 'f', 'Qh', 'Qet', 'Qr', 'Qs', 'S', 'Qrc', 'Qbc', 'Qsc', 'Taub'])
-#    
+#
 #    hrm = HillslopeReservoirModel(mg,node,sw=sw,sf=sw,ETmax=ETmax)
-#    
+#
 #    for j in range(N):
 #        hrm.run_one_step(durations[j],intensities[j])
-#        
+#
 #        df.loc[j] = hrm.yield_all_timestep_data()
-#    
+#
 #    file = open(base_path+'runoff_data_'+str(node)+'.p', 'wb')
 #    pickle.dump(df, file)
 #    file.close()
-#    
+#
 #    print(time.process_time()-start)
-#    
+#
 #    if i>10:
 #        break
 
@@ -180,8 +184,8 @@ def run_one_model_precip(i):
     #precip
     T = 24*365
     dt = min(np.floor(1/mg.at_node['linear_reservoir_constant'][node]),12)
-    
-    precip = PrecipitationDistribution(mean_storm_duration=Tr, mean_interstorm_duration=Td, 
+
+    precip = PrecipitationDistribution(mean_storm_duration=Tr, mean_interstorm_duration=Td,
                                                    mean_storm_depth=p, total_t=T, delta_t=dt)
     durations = []
     intensities = []
@@ -192,8 +196,8 @@ def run_one_model_precip(i):
        durations.append(interval_duration)
        intensities.append(rainfall_rate_in_interval)
     N = len(durations)
-    
-    
+
+
     df = pd.DataFrame(columns = ['dt', 'intensity', 'f', 'Qh', 'Qet', 'Qr', 'Qs', 'S', 'Qrc', 'Qbc', 'Qsc', 'Taub'])
 
     hrm = HillslopeReservoirModel(mg,node)
@@ -206,7 +210,7 @@ def run_one_model_precip(i):
     file = open(base_path+'runoff_data_'+str(node)+'.p', 'wb')
     pickle.dump(df, file)
     file.close()
-    
+
 
 start = time.process_time()
 
