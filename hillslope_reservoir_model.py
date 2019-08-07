@@ -70,6 +70,7 @@ class HillslopeReservoirModel:
         self.k_macropores = grid.at_node['hydraulic_conductivity_f'][node]
         self.gradZo = np.max(grid.at_node['topographic__steepest_slope'][node])
         self.k = grid.at_node['linear_reservoir_constant'][node]
+        self.n_manning = grid.at_node['manning_n'][node]
 
         self.ETmax = grid.at_node['Maximum_ET_rate'][node]
         self.sw = grid.at_node['soil_wilting_point'][node]
@@ -122,6 +123,7 @@ class HillslopeReservoirModel:
         w = self.w
         k = self.k
         n = self.n
+        n_manning = self.n_manning
 
         # infiltration and infiltration excess for timestep
         self.f = min(intensity, Ksat)
@@ -144,7 +146,7 @@ class HillslopeReservoirModel:
 
         # calculate shear stress
         self.Taub = self.rho*self.g*gradZo* (
-                    ((n*self.Qsc/w)/(1*np.sqrt(gradZo)))**(3/5) )
+                    ((n_manning*(self.Qsc/3600)/w)*(1/np.sqrt(gradZo)))**(3/5) )
 
         # update previous timestep infiltration excess (used for Leakage loss)
         self.Qh0 = self.Qh
@@ -156,4 +158,3 @@ class HillslopeReservoirModel:
     def yield_static_properties(self):
         return [self.A, self.w, self.n, self.Z, self.Zo, self.Ksat,
                 self.k_macropores, self.gradZo, self.k, self.ETmax, self.sw, self.sf]
-
