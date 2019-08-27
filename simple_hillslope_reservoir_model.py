@@ -3,6 +3,7 @@
 import numpy as np
 from landlab import RasterModelGrid
 from landlab.grid.mappers import map_max_of_node_links_to_node
+from landlab.utils import return_array_at_node
 
 class SimpleHillslopeReservoirModel:
     """docstring for SimpleHillslopeReservoirModel."""
@@ -50,16 +51,22 @@ class SimpleHillslopeReservoirModel:
         # subsurface transport capacity
         self.Qgw_total_capacity = self.Ksat*self.H*self.S_node*grid.dx
 
-        def run_one_step(self,intensity,duration):
+    def run_one_step(self,intensity,duration):
 
-            if intensity > 0.0:
-                self.Qgw_capacity = self.Ksat*self.Hs*self.S_node*self._grid.dx
-                self.Q = self.grid.at_node['drainage_area']*intensity
-                self.Qsw = np.maximum(self.Q-self.Qgw_capacity,0)
-                self.Qgw = np.minimum(self.Qgw_total_capacity,
-                                                self.Qgw_capacity+self.Q)
+        if intensity > 0.0:
+            self.Qgw_capacity = self.Ksat*self.Hs*self.S_node*self._grid.dx
+            self.Q = self._grid.at_node['drainage_area']*intensity
+            self.Qsw = np.maximum(self.Q-self.Qgw_capacity,0)
+            self.Qgw = np.minimum(self.Qgw_total_capacity,
+                                            self.Qgw_capacity+self.Q)
 
-            else:
-                self.Qgw = self.Qgw*np.exp(-duration*self.K)
-                self.Qsw[:] = 0
-                self.Hs = np.minimum(self.H,self.Qgw/(self.Ksat*self.S_node*self._grid.dx))
+        else:
+            self.Qgw = self.Qgw*np.exp(-duration*self.K)
+            self.Qsw[:] = 0
+            self.Hs = np.minimum(self.H,self.Qgw/(self.Ksat*self.S_node*self._grid.dx))
+
+    def calc_shear_stress(self,n_manning):
+        rho = 1000
+        g = 9.81
+
+        return rho*g*self.S_node *( (n_manning*self.Qsw/3600)/(self._grid.dx*np.sqrt(self.S_node)) )**(3/5)
