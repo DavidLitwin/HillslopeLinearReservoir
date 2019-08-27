@@ -7,7 +7,7 @@ def LeakageLoss(S,f,Qet,Qh,Qs,Qrc,dt,Sf,St,Ksat,A,vo,Zo,w):
 
     #if saturated above field capacity + additional volume added that timestep
     # (incuding f=0), and there is no outlet export limit, then drain at infiltration rate
-    if S + f*A*dt - Ksat*A*dt - Qet >= Sf  and Qrc+Qh+Qs < vo*Zo*w:
+    if S + f*A*dt - Ksat*A*dt - Qet*dt >= Sf  and Qrc+Qh+Qs < vo*Zo*w:
         Qr = Ksat*A
 
     elif S + f*A*dt - Qet*dt >= Sf  and S + f*A*dt - Qet*dt - Ksat*A*dt < Sf and Qrc+Qh+Qs < vo*Zo*w:
