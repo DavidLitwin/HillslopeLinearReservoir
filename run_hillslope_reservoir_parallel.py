@@ -164,18 +164,27 @@ N = len(durations)
 def run_one_model(i):
     node = mg.core_nodes[i]
 
-    df = pd.DataFrame(columns = ['dt', 'intensity', 'f', 'Qh', 'Qet', 'Qr', 'Qs', 'S', 'Qrc', 'Qbc', 'Qsc', 'Taub'])
+    Qbc_cum = 0
+    Qsc_cum = 0
+    Taub_cum = 0
+    # df = pd.DataFrame(columns = ['dt', 'intensity', 'f', 'Qh', 'Qet', 'Qr', 'Qs', 'S', 'Qrc', 'Qbc', 'Qsc', 'Taub'])
 
-    hrm = HillslopeReservoirModel(mg,node,sw=sw,sf=sf,ETmax=ETmax)
+    hrm = HillslopeReservoirModel(mg,node)
 
     for j in range(N):
         hrm.run_one_step(durations[j],intensities[j])
+        Qbc_cum += hrm.Qbc*durations[j]
+        Qsc_cum += hrm.Qsc*durations[j]
+        Taub_cum += hrm.Taub*durations[j]
 
-        df.loc[j] = hrm.yield_all_timestep_data()
 
-    file = open(base_path+'runoff_data_'+str(node)+'.p', 'wb')
-    pickle.dump(df, file)
-    file.close()
+    return [Qbc_cum,Qsc_cum,Taub_cum]
+
+    #     df.loc[j] = hrm.yield_all_timestep_data()
+    #
+    # file = open(base_path+'runoff_data_'+str(node)+'.p', 'wb')
+    # pickle.dump(df, file)
+    # file.close()
 
 
 def run_one_model_precip(i):
@@ -212,14 +221,20 @@ def run_one_model_precip(i):
     file.close()
 
 
-start = time.process_time()
+
 
 if __name__ == '__main__':
     p = mp.Pool()
-    a = p.map(run_one_model_precip, range(mg.number_of_core_nodes))
+    output = p.map(run_one_model, range(mg.number_of_core_nodes))
 
-run_duration = time.process_time()-start
-file = open(base_path+'time.txt', 'w')
-file.write('duration (s)')
-file.write(str(run_duration))
-file.close()
+    file = open(base_path+'runoff_data_cumulative.p', 'wb')
+    pickle.dump(output, file)
+    file.close()
+
+
+# start = time.process_time()
+# run_duration = time.process_time()-start
+# file = open(base_path+'time.txt', 'w')
+# file.write('duration (s)')
+# file.write(str(run_duration))
+# file.close()
