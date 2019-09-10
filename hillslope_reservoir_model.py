@@ -53,6 +53,25 @@ def EvapotranspirationLoss(p,S,Sw,St,ETmax,A,dt):
 
     return Qet
 
+def _regularize_R(u):
+    return u*np.greater_equal(u,0)
+
+def _EvapotranspirationLoss(p,S,Sw,St,ETmax):
+    qet = np.zeros_like(S)
+    i = St>0
+    qet[i] = (p==0.0)*_regularize_R((S[i]-Sw[i])/(St[i]-Sw[i]))*ETmax[i]
+    return qet
+
+
+def _LeakageLoss(S,Sf,St,Ksat):
+    #leakage under unit hydraulic gradient and hydraulic
+    #conductivity that varies linearly from 0 at field capacity to Ksat
+    #at full saturation.
+    ql = np.zeros_like(S)
+    i = St>0
+    ql[i] =  _regularize_R((S[i]-Sf[i])/(St[i]-Sf[i]))*Ksat[i]
+    return ql
+
 
 class HillslopeReservoirModel:
 
@@ -130,26 +149,21 @@ class HillslopeReservoirModel:
         self.Qh = max(0,intensity - Ksat)*A
 
         # soil moisture losses for timestep
-        self.Qet = EvapotranspirationLoss(intensity, self.S, Sw,
-                                          St, ETmax, A, dt)
-        self.Qr = LeakageLoss(self.S,self.f,self.Qet,self.Qh0,self.Qs,
-                              self.Qrc,dt,Sf,St,Ksat,A,vo,Zo,w)
+        self.Qet =  _EvapotranspirationLoss(intensity,self.S,Sw,St,ETmax)
+        self.Qr = _LeakageLoss(self.S,Sf,St,Ksat)
         self.Qs = SaturationExcessLoss(self.S,self.Qr,self.f,St,Sf,A,dt)
 
         # subsurface and surface flow
-        self.Qbc = min(vo*Zo*w, self.Qrc + self.Qs + self.Qh)
-        self.Qsc = max((self.Qrc + self.Qs + self.Qh - vo*Zo*w),0)
+        self.Qbc = min(vo*Zo*w, self.Qrc + self.Qs)
+        self.Qsc = self.Qh + max((self.Qrc + self.Qs - vo*Zo*w),0)
 
         # update soil moisture and linear reservoir
-        self.S = self.S -dt*self.Qet - dt*self.Qr - dt*self.Qs + dt*self.f*A
+        self.S += -dt*self.Qet - dt*self.Qr - dt*self.Qs + dt*self.f*A
         self.Qrc = (1-k*dt)*self.Qrc + k*dt*self.Qr
 
         # calculate shear stress
         self.Taub = self.rho*self.g*gradZo* (
                     ((n_manning*(self.Qsc/3600)/w)*(1/np.sqrt(gradZo)))**(3/5) )
-
-        # update previous timestep infiltration excess (used for Leakage loss)
-        self.Qh0 = self.Qh
 
     def yield_all_timestep_data(self):
         return [self.duration, self.intensity, self.f, self.Qh, self.Qet, self.Qr,
