@@ -4,7 +4,6 @@ Created on Mon Aug  5 16:15:06 2019
 
 @author: dgbli
 """
-import time
 import numpy as np
 import pandas as pd
 import pickle
@@ -109,7 +108,7 @@ kres[mg.core_nodes] = calc_res_constant(mg)
 
 #%% Pickle grid for later use
 
-base_path = "/Users/dgbli/Documents/Project_outputs/Landlab_runoff_LEM_output/"
+base_path = "/Users/dgbli/Documents/Project_outputs/Landlab_runoff_LEM_output_2/"
 
 file = open(base_path+'model_grid.p', 'wb')
 pickle.dump(mg, file)
@@ -231,10 +230,3 @@ if __name__ == '__main__':
     pickle.dump(output, file)
     file.close()
 
-
-# start = time.process_time()
-# run_duration = time.process_time()-start
-# file = open(base_path+'time.txt', 'w')
-# file.write('duration (s)')
-# file.write(str(run_duration))
-# file.close()
