@@ -56,10 +56,11 @@ def EvapotranspirationLoss(p,S,Sw,St,ETmax,A,dt):
 def _regularize_R(u):
     return u*np.greater_equal(u,0)
 
-def _EvapotranspirationLoss(p,S,Sw,St,ETmax):
+def _EvapotranspirationLoss(p,S,Sw,Sf,St,ETmax):
     qet = np.zeros_like(S)
-    i = St>0
-    qet[i] = (p==0.0)*_regularize_R((S[i]-Sw[i])/(St[i]-Sw[i]))*ETmax[i]
+    i = St>0.0
+    qet[i] = (p==0.0)*np.minimum(
+                _regularize_R((S[i]-Sw[i])/(Sf[i]-Sw[i]))*ETmax[i],ETmax[i])
     return qet
 
 
@@ -149,7 +150,7 @@ class HillslopeReservoirModel:
         self.Qh = max(0,intensity - Ksat)*A
 
         # soil moisture losses for timestep
-        self.Qet =  _EvapotranspirationLoss(intensity,self.S,Sw,St,ETmax)
+        self.Qet =  _EvapotranspirationLoss(intensity,self.S,Sw,Sf,St,ETmax)
         self.Qr = _LeakageLoss(self.S,Sf,St,Ksat)
         self.Qs = SaturationExcessLoss(self.S,self.Qr,self.f,St,Sf,A,dt)
 
